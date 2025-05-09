@@ -1,5 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
+
+// Mock localStorage globally before importing the component
+let localStorageMock: any
+localStorageMock = (() => {
+  let store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+  }
+})()
+Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+
 import PetList from '../PetList.vue'
 
 const createWrapper = (props = {}, options = {}) => {
@@ -11,6 +32,9 @@ const createWrapper = (props = {}, options = {}) => {
 describe('PetList.vue', () => {
   let wrapper: any
   beforeEach(() => {
+    localStorageMock.getItem.mockReset()
+    localStorageMock.setItem.mockReset()
+    localStorageMock.clear()
     wrapper = createWrapper()
   })
 
@@ -79,5 +103,43 @@ describe('PetList.vue', () => {
     expect(anchor.click).toHaveBeenCalled()
     createElementSpy.mockRestore()
     appendChildSpy.mockRestore()
+  })
+
+  it('loads pets from localStorage on mount', async () => {
+    localStorageMock.getItem.mockReturnValueOnce(
+      JSON.stringify([
+        {
+          id: 99,
+          name: 'Testy',
+          ownerName: 'Tester',
+          age: 1,
+          favoriteFood: 'TestFood',
+          isFed: true,
+        },
+      ]),
+    )
+    // Create wrapper AFTER setting mock return value
+    const localWrapper = mount(PetList)
+    await nextTick()
+    expect(localWrapper.text()).toContain('Testy')
+    expect(localWrapper.text()).toContain('Tester')
+  })
+
+  it('saves pets to localStorage when changed', async () => {
+    await wrapper.find('.add-pet').trigger('click')
+    const inputs = wrapper.findAll('.modal-content input')
+    await inputs[0].setValue('Rex')
+    await inputs[1].setValue('Sam')
+    await inputs[2].setValue(2)
+    await inputs[3].setValue('Chicken')
+    await wrapper.find('.modal-actions button[type="submit"]').trigger('submit')
+    expect(localStorageMock.setItem).toHaveBeenCalled()
+    const lastCall = localStorageMock.setItem.mock.calls.pop()
+    expect(lastCall[0]).toBe('pets')
+    expect(JSON.parse(lastCall[1])).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Rex', ownerName: 'Sam', age: 2, favoriteFood: 'Chicken' }),
+      ]),
+    )
   })
 })

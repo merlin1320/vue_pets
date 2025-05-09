@@ -1,24 +1,29 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
 import type { Pet } from './PetsType.d.ts'
+import { onMounted, watch } from 'vue'
+
 const pets = ref<Pet[]>([
-  {
-    id: 1,
-    name: 'Fluffy',
-    ownerName: 'Frank',
-    age: 3,
-    favoriteFood: 'Fish',
-    isFed: false,
-  },
-  {
-    id: 2,
-    name: 'Buddy',
-    ownerName: 'Fred',
-    age: 5,
-    favoriteFood: 'Beef',
-    isFed: true,
-  },
+  { id: 1, name: 'Fluffy', ownerName: 'Frank', age: 3, favoriteFood: 'Fish', isFed: false },
+  { id: 2, name: 'Buddy', ownerName: 'Fred', age: 5, favoriteFood: 'Beef', isFed: true },
 ])
+const nextId = ref(pets.value.length ? Math.max(...pets.value.map((p) => p.id)) + 1 : 1)
+
+onMounted(() => {
+  const stored = localStorage.getItem('pets')
+  if (stored) {
+    pets.value = JSON.parse(stored)
+    // Update nextId to be one higher than the max id in loaded pets
+    nextId.value = pets.value.length ? Math.max(...pets.value.map((p) => p.id)) + 1 : 1
+  }
+})
+watch(
+  pets,
+  (newPets) => {
+    localStorage.setItem('pets', JSON.stringify(newPets))
+  },
+  { deep: true },
+)
 function toggleFed(id: number) {
   const pet = pets.value.find((pet) => pet.id === id)
   if (pet) {
@@ -43,7 +48,7 @@ const newPet = ref<Pet>({
 
 function openAddModal() {
   newPet.value = {
-    id: Date.now(),
+    id: nextId.value,
     name: '',
     ownerName: '',
     age: 0,
@@ -63,6 +68,7 @@ function addPet() {
     newPet.value.age > 0
   ) {
     pets.value.push({ ...newPet.value })
+    nextId.value++
     closeAddModal()
   }
 }
@@ -246,7 +252,7 @@ td input[type='checkbox'] + span {
   gap: 1rem;
 }
 .add-pet {
-  background-color: #0f8dd6;
+  background-color: #0c80c3;
   color: white;
   border: none;
   padding: 0.5rem 1.2rem;
@@ -255,7 +261,7 @@ td input[type='checkbox'] + span {
 }
 .filters label {
   margin-left: 0.5rem;
-  color: #222;
+  color: #f5f0f0;
 }
 .modal-overlay {
   position: fixed;
@@ -270,7 +276,7 @@ td input[type='checkbox'] + span {
   z-index: 1000;
 }
 .modal-content {
-  background: #fff;
+  background: #340edd;
   padding: 2rem;
   border-radius: 8px;
   min-width: 300px;
@@ -278,7 +284,7 @@ td input[type='checkbox'] + span {
 }
 .download-btn {
   background-color: #0f8dd6;
-  color: white;
+  color: rgb(0, 0, 0);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 4px;
