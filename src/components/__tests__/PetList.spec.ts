@@ -80,7 +80,11 @@ describe('PetList.vue', () => {
     const removeBtn = wrapper
       .findAll('button')
       .find((btn: { text: () => string }) => btn.text() === 'Remove')
-    await removeBtn.trigger('click')
+    if (removeBtn) {
+      await removeBtn.trigger('click')
+    } else {
+      throw new Error('Remove button not found')
+    }
     expect(wrapper.text()).not.toContain('Fluffy')
   })
 
@@ -121,7 +125,7 @@ describe('PetList.vue', () => {
   })
 
   it('loads pets from localStorage on mount', async () => {
-    localStorageMock.getItem.mockReturnValueOnce(
+    ;(localStorageMock.getItem as ReturnType<typeof vi.fn>).mockReturnValueOnce(
       JSON.stringify([
         {
           id: 99,
