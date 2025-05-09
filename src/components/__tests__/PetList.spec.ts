@@ -3,8 +3,12 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 
 // Mock localStorage globally before importing the component
-let localStorageMock: any
-localStorageMock = (() => {
+const localStorageMock: {
+  getItem: (key: string) => string | null
+  setItem: (key: string, value: string) => void
+  clear: () => void
+  removeItem: (key: string) => void
+} = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: vi.fn((key: string) => store[key] || null),
@@ -23,17 +27,22 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
 import PetList from '../PetList.vue'
 
-const createWrapper = (props = {}, options = {}) => {
+const createWrapper = (
+  props = {},
+  options = {},
+): import('@vue/test-utils').VueWrapper<InstanceType<typeof PetList>> => {
   return mount(PetList, {
+    props,
     ...options,
   })
 }
 
 describe('PetList.vue', () => {
-  let wrapper: any
+  let wrapper: ReturnType<typeof createWrapper>
   beforeEach(() => {
-    localStorageMock.getItem.mockReset()
-    localStorageMock.setItem.mockReset()
+    ;(localStorageMock.getItem as ReturnType<typeof vi.fn>)
+      .mockReset()(localStorageMock.setItem as ReturnType<typeof vi.fn>)
+      .mockReset()
     localStorageMock.clear()
     wrapper = createWrapper()
   })
@@ -68,7 +77,9 @@ describe('PetList.vue', () => {
   })
 
   it('can remove a pet', async () => {
-    const removeBtn = wrapper.findAll('button').find((btn) => btn.text() === 'Remove')
+    const removeBtn = wrapper
+      .findAll('button')
+      .find((btn: { text: () => string }) => btn.text() === 'Remove')
     await removeBtn.trigger('click')
     expect(wrapper.text()).not.toContain('Fluffy')
   })
@@ -96,8 +107,12 @@ describe('PetList.vue', () => {
 
   it('downloads pets as JSON (mocked)', async () => {
     const anchor = { setAttribute: vi.fn(), click: vi.fn(), remove: vi.fn(), style: {} }
-    const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(anchor as any)
-    const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {})
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockReturnValue(anchor as unknown as HTMLAnchorElement)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation(() => document.createElement('div'))
     await wrapper.find('.download-btn').trigger('click')
     expect(createElementSpy).toHaveBeenCalledWith('a')
     expect(anchor.click).toHaveBeenCalled()
