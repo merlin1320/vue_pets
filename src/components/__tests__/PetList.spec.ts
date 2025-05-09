@@ -37,12 +37,28 @@ const createWrapper = (
   })
 }
 
+interface MockWithReset {
+  mockReset: () => void
+}
+function hasMockReset(fn: unknown): fn is MockWithReset {
+  return (
+    typeof fn === 'function' && typeof (fn as unknown as MockWithReset).mockReset === 'function'
+  )
+}
+
 describe('PetList.vue', () => {
   let wrapper: ReturnType<typeof createWrapper>
   beforeEach(() => {
-    ;(localStorageMock.getItem as ReturnType<typeof vi.fn>)
-      .mockReset()(localStorageMock.setItem as ReturnType<typeof vi.fn>)
-      .mockReset()
+    if (hasMockReset(localStorageMock.getItem)) {
+      localStorageMock.getItem.mockReset()
+    } else {
+      localStorageMock.getItem = vi.fn(localStorageMock.getItem)
+    }
+    if (hasMockReset(localStorageMock.setItem)) {
+      localStorageMock.setItem.mockReset()
+    } else {
+      localStorageMock.setItem = vi.fn(localStorageMock.setItem)
+    }
     localStorageMock.clear()
     wrapper = createWrapper()
   })
@@ -153,7 +169,7 @@ describe('PetList.vue', () => {
     await inputs[3].setValue('Chicken')
     await wrapper.find('.modal-actions button[type="submit"]').trigger('submit')
     expect(localStorageMock.setItem).toHaveBeenCalled()
-    const lastCall = (localStorageMock.setItem as ReturnType<typeof vi.fn>).mock.calls.pop()
+    const lastCall = (localStorageMock.setItem as ReturnType<typeof vi.fn>).mock.calls.at(-1)
     if (lastCall) {
       expect(lastCall[0]).toBe('pets')
     } else {
