@@ -25,7 +25,7 @@ const emit = defineEmits<{
   gap: 1rem;
   padding: 0.5rem 0;
 }
-.pet inpu[type='checkbox'] {
+.pet input[type='checkbox'] {
   width: 20px;
   height: 20px;
   cursor: pointer;
