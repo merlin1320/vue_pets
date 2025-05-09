@@ -153,8 +153,12 @@ describe('PetList.vue', () => {
     await inputs[3].setValue('Chicken')
     await wrapper.find('.modal-actions button[type="submit"]').trigger('submit')
     expect(localStorageMock.setItem).toHaveBeenCalled()
-    const lastCall = localStorageMock.setItem.mock.calls.pop()
-    expect(lastCall[0]).toBe('pets')
+    const lastCall = (localStorageMock.setItem as ReturnType<typeof vi.fn>).mock.calls.pop()
+    if (lastCall) {
+      expect(lastCall[0]).toBe('pets')
+    } else {
+      throw new Error('No calls were made to localStorageMock.setItem')
+    }
     expect(JSON.parse(lastCall[1])).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: 'Rex', ownerName: 'Sam', age: 2, favoriteFood: 'Chicken' }),
